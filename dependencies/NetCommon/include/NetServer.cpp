@@ -86,10 +86,8 @@ void NetServer<T>::MessageToClient(NetMessage<T> msg, uint32_t id)
 template<typename T>
 void NetServer<T>::MessageToAllClient(NetMessage<T> msg, uint32_t from)
 {
-	// change the source id of message to the client id
-	msg.m_header.m_source_id = from;
 	// write message to all client, except the one who send message
-	std::deque<uint32_t> disconnectedConnections;
+	std::deque<uint32_t> disconnectID;
 	for (auto connection = m_connections.begin(); connection != m_connections.end(); connection++)
 		if (connection->second->IsAlive())
 		{
@@ -101,13 +99,13 @@ void NetServer<T>::MessageToAllClient(NetMessage<T> msg, uint32_t from)
 		}
 		else
 		{
-			std::cout << connection->first << " is disconnected." << std::endl;
-			disconnectedConnections.push_back(connection->first);
+			disconnectID.push_back(connection->first);
 		}
 
-	for (auto disconnectedConnection = disconnectedConnections.begin(); disconnectedConnection != disconnectedConnections.end(); disconnectedConnection++)
-		Disconnect((*disconnectedConnection));
-
+	for (auto id : disconnectID)
+	{
+		Disconnect(id);
+	}
 }
 
 template<typename T>
@@ -117,6 +115,8 @@ void NetServer<T>::Disconnect(uint32_t id)
 	m_connections[id]->Disconnect();
 	// remove the pointer from the container/manager first, otherwise remove will not work after reset
 	m_connections[id].reset();
+	// erase the nullptr
+	m_connections.erase(id);
 }
 
 template<typename T>

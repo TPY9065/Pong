@@ -18,7 +18,7 @@ void PongServer::WaitForConnection()
 	m_acceptor.async_accept(
 		[this](std::error_code ec, asio::ip::tcp::socket socket)
 		{
-			if (!ec)
+			if (!ec && m_player < World::MAX_PLAYER)
 			{
 				std::cout << "[SERVER] New Connection: " << socket.remote_endpoint() << "\n";
 				// keep the new connection alive
@@ -37,7 +37,8 @@ void PongServer::WaitForConnection()
 				MessageToAllClient(player_join, m_uid);
 
 				// id for next connection
-				m_uid += 1;
+				while (m_connections.find(m_uid) != m_connections.end())
+					m_uid += 1;
 				m_player += 1;
 			}
 			else
@@ -57,30 +58,39 @@ void PongServer::Update()
 		switch (msg.m_header.m_flag)
 		{
 		case Protocal::ACK:
+		{
 			std::cout << "ACK" << std::endl;
 			break;
+		}
 		case Protocal::POS_UPDATE:
-			std::cout << "Pos update from ID: " << msg.m_header.m_source_id << std::endl;
-			MessageToAllClient(msg, msg.m_header.m_source_id);
-			break;
-		case Protocal::BALL_POS:
-			std::cout << "DOWN" << std::endl;
-			break;
-		case Protocal::PLAYER_CONNECT:
-			std::cout << "Player connect from ID: " << msg.m_header.m_source_id << std::endl;
-			MessageToAllClient(msg, msg.m_header.m_source_id);
-			break;
-		case Protocal::PLAYER_DISCONNECT:
 		{
 			MessageToAllClient(msg, msg.m_header.m_source_id);
+			break;
+		}
+		case Protocal::BALL_POS:
+		{
+			std::cout << "ball pos" << std::endl;
+			break;
+		}
+		case Protocal::PLAYER_CONNECT:
+		{
+			MessageToAllClient(msg, msg.m_header.m_source_id);
+			break;
+		}
+		case Protocal::PLAYER_DISCONNECT:
+		{
 			Disconnect(msg.m_header.m_source_id);
+			MessageToAllClient(msg, msg.m_header.m_source_id);
 			m_player -= 1;
+			if (msg.m_header.m_source_id < m_uid)
+				m_uid = msg.m_header.m_source_id;
 			break;
 		}
 		default:
 			break;
 		}
 	}
+
 }
 
 void PongServer::Run()
