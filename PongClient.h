@@ -4,8 +4,9 @@
 enum class Protocal
 {
     ACK = 0,
-    POS_UPDATE,
-    BALL_POS,
+    PLAYER_UPDATE,
+    BALL_UPDATE,
+    PLAYER_LOSE,
     PLAYER_CONNECT,
     PLAYER_DISCONNECT
 };
@@ -28,24 +29,29 @@ public:
     ~PongClient();
     // add score when other player fails to hit the ball back 
     void AddScore();
-    void Move(int x, int y);
+    // move towards x and y steps
+    void Move(int stepX, int stepY);
+    // set the plate xy-pos and width height
     void SetXYWH();
+    // set the client's ID
     void SetID(uint32_t id);
+    // main function of the client
     void Run();
+    // send message to server
     void MessageToServer(NetMessage<Protocal> msg);
-    uint32_t GetID();
-    uint32_t GetScore();
+    uint32_t GetID() { return m_uid; };
+    uint32_t GetScore() { return m_score; };
     int ClampX(int x);
     int ClampY(int y);
-    int GetX();
-    int GetY();
-    int GetWidth();
-    int GetHeight();
-    uint32_t GetUX();
-    uint32_t GetUY();
-    uint32_t GetUWidth();
-    uint32_t GetUHeight();
-    Player GetPlayer();
+    int GetX() { return m_x; };
+    int GetY() { return m_y; };
+    int GetWidth() { return m_width; };
+    int GetHeight() { return m_height; };
+    uint32_t GetUX() { return m_x; };
+    uint32_t GetUY() { return m_y; };
+    uint32_t GetUWidth() { return m_width; };
+    uint32_t GetUHeight() { return m_height; };
+    Player GetPlayer() { return m_player; };
 private:
     // client id
     uint32_t m_uid;

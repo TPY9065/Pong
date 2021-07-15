@@ -62,14 +62,14 @@ void PongServer::Update()
 			std::cout << "ACK" << std::endl;
 			break;
 		}
-		case Protocal::POS_UPDATE:
+		case Protocal::PLAYER_UPDATE:
 		{
 			MessageToAllClient(msg, msg.m_header.m_source_id);
 			break;
 		}
-		case Protocal::BALL_POS:
+		case Protocal::BALL_UPDATE:
 		{
-			std::cout << "ball pos" << std::endl;
+			MessageToAllClient(msg, msg.m_header.m_source_id);
 			break;
 		}
 		case Protocal::PLAYER_CONNECT:
@@ -77,6 +77,9 @@ void PongServer::Update()
 			MessageToAllClient(msg, msg.m_header.m_source_id);
 			break;
 		}
+		case Protocal::PLAYER_LOSE:
+			MessageToAllClient(msg, msg.m_header.m_source_id);
+			break;
 		case Protocal::PLAYER_DISCONNECT:
 		{
 			Disconnect(msg.m_header.m_source_id);

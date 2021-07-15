@@ -14,8 +14,9 @@ public:
 enum class Protocal
 {
     ACK = 0,
-    POS_UPDATE,
-    BALL_POS,
+    PLAYER_UPDATE,
+    BALL_UPDATE,
+    PLAYER_LOSE,
     PLAYER_CONNECT,
     PLAYER_DISCONNECT
 };

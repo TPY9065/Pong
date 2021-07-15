@@ -1,5 +1,6 @@
 #pragma once
 #include "PongClient.h"
+#include "Ball.h"
 
 struct Opponent
 {
@@ -7,7 +8,6 @@ public:
 	Opponent() {};
 	Opponent(uint32_t id) : m_uid(id), m_player(static_cast<Player>(id % 10000)), m_x(0), m_y(0), m_width(0), m_height(0) {};
 	uint32_t GetID() { return m_uid; };
-	uint32_t GetScore() { return m_score; };
 	int GetX() { return m_x; };
 	int GetY() { return m_y; };
 	int GetWidth() { return m_width; };
@@ -28,8 +28,6 @@ public:
 private:
 	// client id
 	uint32_t m_uid = 0;
-	// player's score
-	uint32_t m_score = 0;
 	// player ID
 	Player m_player = Player::EMPTY;
 	// paddle props
@@ -48,7 +46,10 @@ public:
 	void InitWindow();
 	void InitRenderer();
 	void GetInput();
+	// draw a circle using Bresenham¡¦s circle drawing algorithm
+	void DrawBall();
 	void Draw();
+	void MoveBall();
 	void Update();
 	void Run();
 	void AddPlayer();
@@ -58,6 +59,8 @@ private:
 	SDL_Renderer* m_Renderer;
 	SDL_Window* m_Window;
 	SDL_Event m_userInput;
+	Ball m_ball;
 	bool m_running;
+	bool m_start;
 };
 

@@ -1,11 +1,12 @@
 #include "Game.h"
 
-Game::Game()
+Game::Game() : m_ball(World::WIDTH / 2, World::HEIGHT / 2, World::WIDTH / 50)
 {	
 	// init SDL
 	Init();
 	// init player
 	m_running = true;
+	m_start = false;
 }
 
 Game::~Game()
@@ -72,7 +73,7 @@ void Game::GetInput()
 				if (GetPlayer() == Player::P3 || GetPlayer() == Player::P4)
 				{
 					Move(-10, 0);
-					NetMessage<Protocal> pos(GetID(), Protocal::POS_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
+					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 					MessageToServer(pos);
 				}
 				break;
@@ -82,7 +83,7 @@ void Game::GetInput()
 				if (GetPlayer() == Player::P3 || GetPlayer() == Player::P4)
 				{
 					Move(10, 0);
-					NetMessage<Protocal> pos(GetID(), Protocal::POS_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
+					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 					MessageToServer(pos);
 				}
 				break;
@@ -92,7 +93,7 @@ void Game::GetInput()
 				if (GetPlayer() == Player::P1 || GetPlayer() == Player::P2)
 				{
 					Move(0, -10);
-					NetMessage<Protocal> pos(GetID(), Protocal::POS_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
+					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 					MessageToServer(pos);
 				}
 				break;
@@ -102,18 +103,63 @@ void Game::GetInput()
 				if (GetPlayer() == Player::P1 || GetPlayer() == Player::P2)
 				{
 					Move(0, 10);
-					NetMessage<Protocal> pos(GetID(), Protocal::POS_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
+					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 					MessageToServer(pos);
 				}
 				break;
 			}
 			case SDLK_KP_ENTER:
-				std::cout << "ID: " << GetID() << std::endl;
+				if (GetPlayer() == Player::P1)
+				{
+					m_ball.Init();
+					NetMessage<Protocal> ball_data(GetID(), Protocal::BALL_UPDATE, {m_ball.GetVX(), m_ball.GetVY() });
+					MessageToServer(ball_data);
+				}
 			}
 		}
 		default:
 			break;
 		}
+	}
+}
+
+void Game::DrawBall()
+{
+	// start from (0, r)
+	int x = 0;
+	int y = m_ball.GetRadius();
+	int d = 3 - 2 * m_ball.GetRadius();
+
+	// draw the starting points
+	SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() + x, m_ball.GetY() - y);
+	SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() + y, m_ball.GetY() - x);
+	SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() + x, m_ball.GetY() + y);
+	SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() - y, m_ball.GetY() + x);
+
+	while (x <= y)
+	{
+		// the next x-pos will at least 1 pixel larger than the previous point
+		x += 1;
+		// if the point is inside circle
+		if (d < 0)
+		{
+			d = d + 4 * x + 6;
+		}
+		else
+		{
+			d = d + 4 * (x - y) + 10;
+			y -= 1;
+		}
+
+		// draw the corresponding point in each octant
+		SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() + x, m_ball.GetY() - y);
+		SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() + y, m_ball.GetY() - x);
+		SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() + y, m_ball.GetY() + x);
+		SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() + x, m_ball.GetY() + y);
+		SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() - x, m_ball.GetY() + y);
+		SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() - y, m_ball.GetY() + x);
+		SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() - y, m_ball.GetY() - x);
+		SDL_RenderDrawPoint(m_Renderer, m_ball.GetX() - x, m_ball.GetY() - y);
 	}
 }
 
@@ -139,8 +185,25 @@ void Game::Draw()
 		SDL_RenderFillRect(m_Renderer, &opponentRect);
 	}
 
+	// draw ball
+	DrawBall();
+
 	// update on screen
 	SDL_RenderPresent(m_Renderer);
+}
+
+void Game::MoveBall()
+{
+	// move the ball
+	m_ball.Move();
+	// check if it is going to hit the wall
+	if (m_ball.HitWall() && GetPlayer() == Player::P1)
+	{
+		m_ball.Bounce();
+		// mesage to other clients that the ball hit the wall
+		NetMessage<Protocal> bounce(GetID(), Protocal::BALL_UPDATE, { m_ball.GetVX(), m_ball.GetVY() });
+		MessageToServer(bounce);
+	}
 }
 
 void Game::Update()
@@ -156,11 +219,11 @@ void Game::Update()
 			SetID(msg.m_body[0]);
 			SetXYWH();
 			// std::cout << "ID: " << GetID() << std::endl;
-			NetMessage<Protocal> self_data(GetID(), Protocal::POS_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
+			NetMessage<Protocal> self_data(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 			WriteMessage(self_data);
 			break;
 		}
-		case Protocal::POS_UPDATE:
+		case Protocal::PLAYER_UPDATE:
 		{
 			// update opponents position
 			if (m_opponents.find(msg.m_header.m_source_id) == m_opponents.end())
@@ -171,8 +234,8 @@ void Game::Update()
 			m_opponents[msg.m_header.m_source_id].SetXYWH(msg.m_body[0], msg.m_body[1], msg.m_body[2], msg.m_body[3]);
 			break;
 		}
-		case Protocal::BALL_POS:
-			std::cout << "Ball pos" << std::endl;
+		case Protocal::BALL_UPDATE:
+			m_ball.SetVec(msg.m_body[0], msg.m_body[1]);
 			break;
 		case Protocal::PLAYER_CONNECT:
 		{
@@ -182,7 +245,7 @@ void Game::Update()
 				// std::cout << "Player ID[" << msg.m_body[0] << "] connect" << std::endl;
 				m_opponents.emplace(msg.m_header.m_source_id, Opponent(msg.m_body[0]));
 				// send back self data
-				NetMessage<Protocal> self_data(GetID(), Protocal::POS_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
+				NetMessage<Protocal> self_data(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 				MessageToServer(self_data);
 			}
 			break;
@@ -208,6 +271,8 @@ void Game::Run()
 		GetInput();
 		// get data from server
 		Update();
+		// move the ball
+		MoveBall();
 		// draw player and opponents
 		Draw();
 	}
