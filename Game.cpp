@@ -1,12 +1,13 @@
 #include "Game.h"
 
-Game::Game() : m_ball(World::WIDTH / 2, World::HEIGHT / 2, World::WIDTH / 50)
+Game::Game() : m_ball(World::WIDTH / 2, World::HEIGHT / 2, World::WIDTH / 50), m_bKeyDown({ {'U', false}, {'D', false}, {'L', false}, {'R', false} })
 {	
 	// init SDL
 	Init();
 	// init player
 	m_running = true;
 	m_start = false;
+	m_bKeyPressed = false;
 }
 
 Game::~Game()
@@ -51,7 +52,7 @@ void Game::InitRenderer()
 
 void Game::GetInput()
 {
-	while (SDL_PollEvent(&m_userInput) != 0)
+	while (SDL_PollEvent(&m_userInput) != 0 && !m_bKeyPressed)
 	{
 		switch (m_userInput.type)
 		{
@@ -72,9 +73,7 @@ void Game::GetInput()
 			{
 				if (GetPlayer() == Player::P3 || GetPlayer() == Player::P4)
 				{
-					Move(-20, 0);
-					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
-					MessageToServer(pos);
+					m_bKeyDown['L'] = true;
 				}
 				break;
 			}
@@ -82,9 +81,7 @@ void Game::GetInput()
 			{
 				if (GetPlayer() == Player::P3 || GetPlayer() == Player::P4)
 				{
-					Move(20, 0);
-					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
-					MessageToServer(pos);
+					m_bKeyDown['R'] = true;
 				}
 				break;
 			}
@@ -92,9 +89,7 @@ void Game::GetInput()
 			{
 				if (GetPlayer() == Player::P1 || GetPlayer() == Player::P2)
 				{
-					Move(0, -20);
-					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
-					MessageToServer(pos);
+					m_bKeyDown['U'] = true;
 				}
 				break;
 			}
@@ -102,9 +97,7 @@ void Game::GetInput()
 			{
 				if (GetPlayer() == Player::P1 || GetPlayer() == Player::P2)
 				{
-					Move(0, 20);
-					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
-					MessageToServer(pos);
+					m_bKeyDown['D'] = true;
 				}
 				break;
 			}
@@ -112,14 +105,68 @@ void Game::GetInput()
 				if (GetPlayer() == Player::P1)
 				{
 					m_ball.Init();
-					NetMessage<Protocal> ball_data(GetID(), Protocal::BALL_UPDATE, {static_cast<uint32_t>(m_ball.GetVX()), static_cast<uint32_t>(m_ball.GetVY()) });
+					NetMessage<Protocal> ball_data(GetID(), Protocal::BALL_UPDATE, { static_cast<uint32_t>(m_ball.GetVX()), static_cast<uint32_t>(m_ball.GetVY()) });
 					MessageToServer(ball_data);
 				}
 			}
+			break;
+		}
+		case SDL_KEYUP:
+		{
+			switch (m_userInput.key.keysym.sym)
+			{
+			case SDLK_LEFT:
+			{
+				if (GetPlayer() == Player::P3 || GetPlayer() == Player::P4 && m_bKeyDown['L'])
+				{
+					m_bKeyDown['L'] = false;
+				}
+				break;
+			}
+			case SDLK_RIGHT:
+			{
+				if (GetPlayer() == Player::P3 || GetPlayer() == Player::P4 && m_bKeyDown['R'])
+				{
+					m_bKeyDown['R'] = false;
+				}
+				break;
+			}
+			case SDLK_UP:
+			{
+				if (GetPlayer() == Player::P1 || GetPlayer() == Player::P2 && m_bKeyDown['U'])
+				{
+					m_bKeyDown['U'] = false;
+				}
+				break;
+			}
+			case SDLK_DOWN:
+			{
+				if (GetPlayer() == Player::P1 || GetPlayer() == Player::P2 && m_bKeyDown['D'])
+				{
+					m_bKeyDown['D'] = false;
+				}
+				break;
+			}
+			}
+			break;
 		}
 		default:
 			break;
 		}
+	}
+
+	if (m_bKeyDown['U'] || m_bKeyDown['D'] || m_bKeyDown['L'] || m_bKeyDown['R'])
+	{
+		if (m_bKeyDown['U'])
+			Move(0, -10);
+		else if (m_bKeyDown['D'])
+			Move(0, 10);
+		else if (m_bKeyDown['L'])
+			Move(-10, 0);
+		else if (m_bKeyDown['R'])
+			Move(10 , 0);
+		NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
+		MessageToServer(pos);
 	}
 }
 
@@ -359,8 +406,14 @@ void Game::Update()
 
 void Game::Run()
 {
+	Uint32 startFrameTime, endFrameTime;
+	float delta;
+	startFrameTime = SDL_GetTicks();
+	endFrameTime = SDL_GetTicks();
 	while (m_running)
 	{
+		delta = (endFrameTime - startFrameTime) * 0.001;
+		startFrameTime = SDL_GetTicks();
 		// get user input
 		GetInput();
 		// get data from server
@@ -369,6 +422,7 @@ void Game::Run()
 		MoveBall();
 		// draw player and opponents
 		Draw();
+		endFrameTime = SDL_GetTicks();
 	}
 }
 

@@ -29,7 +29,7 @@ void Ball::Init()
 	if (m_vec == ZERO)
 	{
 		// get random x and y velocity
-		m_vec.SetXY(rand() % 5 + 5, rand() % 5 + 5);
+		m_vec.SetXY(rand() % 3 + 4, rand() % 3 + 4);
 	}
 }
 

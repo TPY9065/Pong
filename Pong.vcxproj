@@ -109,7 +109,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)dependencies\NetCommon\include;$(SolutionDir)dependencies\SDL2-2.0.14\include;$(SolutionDir)dependencies\asio-1.18.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>NetCommon.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
@@ -128,7 +128,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)dependencies\NetCommon\include;$(SolutionDir)dependencies\SDL2-2.0.14\include;$(SolutionDir)dependencies\asio-1.18.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -147,7 +147,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)dependencies\NetCommon\include;$(SolutionDir)dependencies\SDL2-2.0.14\include;$(SolutionDir)dependencies\asio-1.18.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>NetCommon.lib;SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
@@ -166,7 +166,7 @@
       <AdditionalIncludeDirectories>$(SolutionDir)dependencies\NetCommon\include;$(SolutionDir)dependencies\SDL2-2.0.14\include;$(SolutionDir)dependencies\asio-1.18.2\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>

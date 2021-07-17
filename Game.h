@@ -61,6 +61,9 @@ public:
 	bool IsInit();
 private:
 	std::unordered_map<uint32_t, Opponent> m_opponents;
+	// use to check if current key is pressed of released: U D L R
+	std::unordered_map<char, bool> m_bKeyDown;
+	bool m_bKeyPressed;
 	SDL_Renderer* m_Renderer;
 	SDL_Window* m_Window;
 	SDL_Event m_userInput;
