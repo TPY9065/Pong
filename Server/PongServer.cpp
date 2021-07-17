@@ -64,6 +64,7 @@ void PongServer::Update()
 		}
 		case Protocal::PLAYER_UPDATE:
 		{
+			// std::cout << "Player ID: " << msg.m_header.m_source_id << " sent PLAYER_UPDATE message" << std::endl;
 			MessageToAllClient(msg, msg.m_header.m_source_id);
 			break;
 		}

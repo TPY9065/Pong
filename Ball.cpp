@@ -68,20 +68,15 @@ void Ball::SetPos(int x, int y)
 	m_pos.SetXY(x, y);
 }
 
-bool Ball::HitWall(const Vector2D& v) const
+bool Ball::HitWall()
 {
-	// return true if the coordinate of the ball is going to hit the boundary
+	Vector2D v = m_pos + m_vec;
 	if (v.m_x - m_radius <= 0 || v.m_x + m_radius >= World::WIDTH || v.m_y - m_radius <= 0 || v.m_y + m_radius >= World::HEIGHT)
 		return true;
 	return false;
 }
 
-bool Ball::HitWall()
-{
-	return HitWall(m_pos + m_vec);
-}
-
-bool Ball::HitPlayer(int x, int y, int w, int h, Player p)
+bool Ball::HitPlayer(int x, int y, int w, int h)
 {
 	// find the xy difference between the center of the ball and the plate
 	int xDiff = m_pos.m_x + m_vec.m_x - (x + w / 2);
@@ -90,32 +85,7 @@ bool Ball::HitPlayer(int x, int y, int w, int h, Player p)
 	int yLimit = m_radius + h / 2;
 
 	if (abs(xDiff) < xLimit && abs(yDiff) < yLimit)
-	{
-		if (p == Player::P1 || p == Player::P2)
-		{
-			if (xDiff >= 0)
-			{
-				m_pos.m_x = x + w + m_radius;
-			}
-			else if (xDiff < 0)
-			{
-				m_pos.m_x = x - m_radius;
-			}
-		}
-		else if (p == Player::P3 || p == Player::P4)
-		{
-			if (yDiff >= 0)
-			{
-				m_pos.m_y = y + h + m_radius;
-			}
-			else
-			{
-				m_pos.m_y = y - m_radius;
-			}
-		}
-
 		return true;
-	}
 	return false;
 }
 

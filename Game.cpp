@@ -112,7 +112,7 @@ void Game::GetInput()
 				if (GetPlayer() == Player::P1)
 				{
 					m_ball.Init();
-					NetMessage<Protocal> ball_data(GetID(), Protocal::BALL_UPDATE, {m_ball.GetVX(), m_ball.GetVY() });
+					NetMessage<Protocal> ball_data(GetID(), Protocal::BALL_UPDATE, {static_cast<uint32_t>(m_ball.GetVX()), static_cast<uint32_t>(m_ball.GetVY()) });
 					MessageToServer(ball_data);
 				}
 			}
@@ -194,28 +194,116 @@ void Game::Draw()
 
 void Game::MoveBall()
 {
+	bool bounce = false;
 	// move the ball
 	m_ball.Move();
-	// check if it is going to hit the wall
-	if (m_ball.HitWall() || m_ball.HitPlayer(GetX(), GetY(), GetWidth(), GetHeight(), GetPlayer()))
+	// if it hits wall or player, set its position back to the boundary
+	if (m_ball.HitWall())
 	{
-		m_ball.Bounce(GetPlayer());
+		Vector2D arrivedPos = m_ball.GetPos() + m_ball.GetVec();
+		// check which wall the ball hit
+		if (arrivedPos.m_x - m_ball.GetRadius() < 0)
+		{
+			m_ball.SetPos(0 + m_ball.GetRadius(), m_ball.GetY());
+			m_ball.SetVec(-m_ball.GetVX(), m_ball.GetVY());
+		}
+		else if (arrivedPos.m_x + m_ball.GetRadius() > World::WIDTH)
+		{
+			m_ball.SetPos(World::WIDTH - m_ball.GetRadius(), m_ball.GetY());
+			m_ball.SetVec(-m_ball.GetVX(), m_ball.GetVY());
+		}
+		else if (arrivedPos.m_y - m_ball.GetRadius() < 0)
+		{
+			m_ball.SetPos(m_ball.GetX(), 0 + m_ball.GetRadius());
+			m_ball.SetVec(m_ball.GetVX(), -m_ball.GetVY());
+		}
+		else if (arrivedPos.m_y + m_ball.GetRadius() > World::HEIGHT)
+		{
+			m_ball.SetPos(m_ball.GetX(), World::HEIGHT - m_ball.GetRadius());
+			m_ball.SetVec(m_ball.GetVX(), -m_ball.GetVY());
+		}
+		return;
+	}
+	
+	Player playerHit = Player::EMPTY;
+	Vector2D arrivedPos = m_ball.GetPos() + m_ball.GetVec();
+	int xDiff = 0;
+	int yDiff = 0;
+	int x = 0;
+	int y = 0;
+	int w = 0;
+	int h = 0;
+
+	// if it hit self, else loop through all opponents
+	if (m_ball.HitPlayer(GetX(), GetY(), GetWidth(), GetHeight()))
+	{
+		playerHit = GetPlayer();
+		xDiff = arrivedPos.m_x - (GetX() + GetWidth() / 2);
+		yDiff = arrivedPos.m_y - (GetY() + GetHeight() / 2);
+		x = GetX();
+		y = GetY();
+		w = GetWidth();
+		h = GetHeight();
+		bounce = true;
 	}
 	else
 	{
 		for (auto opponent = m_opponents.begin(); opponent != m_opponents.end(); opponent++)
-		{
-			if (m_ball.HitPlayer(opponent->second.GetX(), opponent->second.GetY(), opponent->second.GetWidth(), opponent->second.GetHeight(), opponent->second.GetPlayer()))
+			if (m_ball.HitPlayer(opponent->second.GetX(), opponent->second.GetY(), opponent->second.GetWidth(), opponent->second.GetHeight()))
 			{
-				m_ball.Bounce(opponent->second.GetPlayer());
+				playerHit = opponent->second.GetPlayer();
+				xDiff = arrivedPos.m_x - (opponent->second.GetX() + opponent->second.GetWidth() / 2);
+				yDiff = arrivedPos.m_y - (opponent->second.GetY() + opponent->second.GetHeight() / 2);
+				x = opponent->second.GetX();
+				y = opponent->second.GetY();
+				w = opponent->second.GetWidth();
+				h = opponent->second.GetHeight();
+				bounce = true;
+				break;
 			}
-		}
 	}
+
+	switch (playerHit)
+	{
+	case Player::P1:
+	case Player::P2:
+	{
+		if (xDiff >= 0)
+		{
+			m_ball.SetPos(x + w + m_ball.GetRadius(), m_ball.GetY());
+		}
+		else if (xDiff < 0)
+		{
+			m_ball.SetPos(x - m_ball.GetRadius(), m_ball.GetY());
+		}
+		break;
+	}
+	case Player::P3:
+	case Player::P4:
+	{
+		if (yDiff >= 0)
+		{
+			m_ball.SetPos(m_ball.GetX(), y + h + m_ball.GetRadius());
+		}
+		else
+		{
+			m_ball.SetPos(m_ball.GetX(), y - m_ball.GetRadius());
+		}
+		break;
+	}
+	case Player::EMPTY:
+		return;
+	default:
+		break;
+	}
+
+	if (bounce)
+		m_ball.Bounce(playerHit);
 }
 
 void Game::Update()
 {
-	if (!m_messageIn.empty())
+	while (!m_messageIn.empty())
 	{
 		NetMessage<Protocal> msg = m_messageIn.pop_front();
 		switch (msg.m_header.m_flag)
@@ -224,6 +312,7 @@ void Game::Update()
 		{
 			SetID(msg.m_body[0]);
 			SetXYWH();
+			std::cout << "Your ID: " << GetID() << std::endl;
 			NetMessage<Protocal> self_data(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 			WriteMessage(self_data);
 			break;

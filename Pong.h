@@ -32,6 +32,11 @@ struct Vector2D
 public:
     Vector2D() { m_x = 0; m_y = 0; };
     Vector2D(int x, int y) { m_x = x; m_y = y; };
+    Vector2D(const Vector2D& v)
+    {
+        m_x = v.m_x;
+        m_y = v.m_y;
+    }
     void SetXY(int x, int y) { m_x = x; m_y = y; }
     void MoveXY(int x, int y) { m_x += x; m_y += y; }
     Vector2D operator+(Vector2D v)
