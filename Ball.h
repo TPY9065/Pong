@@ -9,7 +9,7 @@ public:
     Ball();
     // default destructor
     ~Ball();
-    void Bounce();
+    void Bounce(Player player);
     void Init();
     void Move();
     void Reset();
@@ -18,6 +18,7 @@ public:
     // check if the xy-pos will hit the wall or not
     bool HitWall(const Vector2D& v) const;
     bool HitWall();
+    bool HitPlayer(int x, int y, int w, int h, Player p);
     int GetX() { return m_pos.m_x; };
     int GetY() { return m_pos.m_y; };
     int GetRadius() { return m_radius; };

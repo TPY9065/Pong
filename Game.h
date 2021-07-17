@@ -7,6 +7,11 @@ struct Opponent
 public:
 	Opponent() {};
 	Opponent(uint32_t id) : m_uid(id), m_player(static_cast<Player>(id % 10000)), m_x(0), m_y(0), m_width(0), m_height(0) {};
+	void SetID(int id)
+	{
+		m_uid = id;
+		m_player = static_cast<Player>(id % 10000);
+	}
 	uint32_t GetID() { return m_uid; };
 	int GetX() { return m_x; };
 	int GetY() { return m_y; };

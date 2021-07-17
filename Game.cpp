@@ -72,7 +72,7 @@ void Game::GetInput()
 			{
 				if (GetPlayer() == Player::P3 || GetPlayer() == Player::P4)
 				{
-					Move(-10, 0);
+					Move(-20, 0);
 					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 					MessageToServer(pos);
 				}
@@ -82,7 +82,7 @@ void Game::GetInput()
 			{
 				if (GetPlayer() == Player::P3 || GetPlayer() == Player::P4)
 				{
-					Move(10, 0);
+					Move(20, 0);
 					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 					MessageToServer(pos);
 				}
@@ -92,7 +92,7 @@ void Game::GetInput()
 			{
 				if (GetPlayer() == Player::P1 || GetPlayer() == Player::P2)
 				{
-					Move(0, -10);
+					Move(0, -20);
 					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 					MessageToServer(pos);
 				}
@@ -102,7 +102,7 @@ void Game::GetInput()
 			{
 				if (GetPlayer() == Player::P1 || GetPlayer() == Player::P2)
 				{
-					Move(0, 10);
+					Move(0, 20);
 					NetMessage<Protocal> pos(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 					MessageToServer(pos);
 				}
@@ -197,12 +197,19 @@ void Game::MoveBall()
 	// move the ball
 	m_ball.Move();
 	// check if it is going to hit the wall
-	if (m_ball.HitWall() && GetPlayer() == Player::P1)
+	if (m_ball.HitWall() || m_ball.HitPlayer(GetX(), GetY(), GetWidth(), GetHeight(), GetPlayer()))
 	{
-		m_ball.Bounce();
-		// mesage to other clients that the ball hit the wall
-		NetMessage<Protocal> bounce(GetID(), Protocal::BALL_UPDATE, { m_ball.GetVX(), m_ball.GetVY() });
-		MessageToServer(bounce);
+		m_ball.Bounce(GetPlayer());
+	}
+	else
+	{
+		for (auto opponent = m_opponents.begin(); opponent != m_opponents.end(); opponent++)
+		{
+			if (m_ball.HitPlayer(opponent->second.GetX(), opponent->second.GetY(), opponent->second.GetWidth(), opponent->second.GetHeight(), opponent->second.GetPlayer()))
+			{
+				m_ball.Bounce(opponent->second.GetPlayer());
+			}
+		}
 	}
 }
 
@@ -215,10 +222,8 @@ void Game::Update()
 		{
 		case Protocal::ACK:
 		{
-			// std::cout << "Ack message: " << std::endl;
 			SetID(msg.m_body[0]);
 			SetXYWH();
-			// std::cout << "ID: " << GetID() << std::endl;
 			NetMessage<Protocal> self_data(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 			WriteMessage(self_data);
 			break;
@@ -228,9 +233,9 @@ void Game::Update()
 			// update opponents position
 			if (m_opponents.find(msg.m_header.m_source_id) == m_opponents.end())
 			{
+				std::cout << "Player ID: " << msg.m_header.m_source_id << " is in the room" << std::endl;
 				m_opponents.emplace(msg.m_header.m_source_id, Opponent(msg.m_header.m_source_id));
 			}
-			// std::cout << "Player ID [" << msg.m_header.m_source_id << "] pos update" << std::endl;
 			m_opponents[msg.m_header.m_source_id].SetXYWH(msg.m_body[0], msg.m_body[1], msg.m_body[2], msg.m_body[3]);
 			break;
 		}
@@ -242,8 +247,8 @@ void Game::Update()
 			// create an opponent object if no exist
 			if (m_opponents.find(msg.m_body[0]) == m_opponents.end())
 			{
-				// std::cout << "Player ID[" << msg.m_body[0] << "] connect" << std::endl;
-				m_opponents.emplace(msg.m_header.m_source_id, Opponent(msg.m_body[0]));
+				std::cout << "Player ID: " << msg.m_body[0] << " is connected" << std::endl;
+				m_opponents.emplace(msg.m_body[0], Opponent(msg.m_body[0]));
 				// send back self data
 				NetMessage<Protocal> self_data(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
 				MessageToServer(self_data);

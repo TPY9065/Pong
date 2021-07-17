@@ -6,6 +6,15 @@
 #include <stdlib.h>
 #include <time.h>
 
+enum class Player
+{
+    P1 = 0,
+    P2,
+    P3,
+    P4,
+    EMPTY
+};
+
 class World
 {
 public:

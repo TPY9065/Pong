@@ -11,15 +11,6 @@ enum class Protocal
     PLAYER_DISCONNECT
 };
 
-enum class Player
-{
-    P1 = 0,
-    P2,
-    P3,
-    P4,
-    EMPTY
-};
-
 class PongClient: public NetClient<Protocal>
 {
 public:

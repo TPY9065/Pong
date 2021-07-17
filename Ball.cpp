@@ -15,21 +15,12 @@ Ball::~Ball()
 
 }
 
-void Ball::Bounce()
+void Ball::Bounce(Player player)
 {
-	if (HitWall())
-	{
-		if (m_pos.m_x + m_vec.m_x - m_radius <= 0 || m_pos.m_x + m_vec.m_x + m_radius >= World::WIDTH)
-			if (m_vec.m_x < 0)
-				m_vec.SetXY(rand() % 5 + 5, m_vec.m_y);
-			else
-				m_vec.SetXY(-(rand() % 5 + 5), m_vec.m_y);
-		else if (m_pos.m_y + m_vec.m_y - m_radius <= 0 || m_pos.m_y + m_vec.m_y + m_radius >= World::HEIGHT)
-			if (m_vec.m_y < 0)
-				m_vec.SetXY(m_vec.m_x, rand() % 5 + 5);
-			else
-				m_vec.SetXY(m_vec.m_x, -(rand() % 5 + 5));
-	}
+	if (player == Player::P1 || player == Player::P2 || m_pos.m_x + m_vec.m_x - m_radius <= 0 || m_pos.m_x + m_vec.m_x + m_radius >= World::WIDTH)
+		m_vec.SetXY(-m_vec.m_x, m_vec.m_y);
+	else if (player == Player::P3 || player == Player::P4 || m_pos.m_y + m_vec.m_y - m_radius <= 0 || m_pos.m_y + m_vec.m_y + m_radius >= World::HEIGHT)
+		m_vec.SetXY(m_vec.m_x, -m_vec.m_y);
 }
 
 void Ball::Init()
@@ -44,7 +35,7 @@ void Ball::Init()
 
 void Ball::Move()
 {
-	if (HitWall())
+	if (HitWall())  
 	{
 		if (m_pos.m_x + m_vec.m_x + m_radius >= World::WIDTH)
 			m_pos.m_x = World::WIDTH - m_radius;
@@ -88,6 +79,44 @@ bool Ball::HitWall(const Vector2D& v) const
 bool Ball::HitWall()
 {
 	return HitWall(m_pos + m_vec);
+}
+
+bool Ball::HitPlayer(int x, int y, int w, int h, Player p)
+{
+	// find the xy difference between the center of the ball and the plate
+	int xDiff = m_pos.m_x + m_vec.m_x - (x + w / 2);
+	int yDiff = m_pos.m_y + m_vec.m_y - (y + h / 2);
+	int xLimit = m_radius + w / 2;
+	int yLimit = m_radius + h / 2;
+
+	if (abs(xDiff) < xLimit && abs(yDiff) < yLimit)
+	{
+		if (p == Player::P1 || p == Player::P2)
+		{
+			if (xDiff >= 0)
+			{
+				m_pos.m_x = x + w + m_radius;
+			}
+			else if (xDiff < 0)
+			{
+				m_pos.m_x = x - m_radius;
+			}
+		}
+		else if (p == Player::P3 || p == Player::P4)
+		{
+			if (yDiff >= 0)
+			{
+				m_pos.m_y = y + h + m_radius;
+			}
+			else
+			{
+				m_pos.m_y = y - m_radius;
+			}
+		}
+
+		return true;
+	}
+	return false;
 }
 
 void Ball::operator=(const Ball& ball)
