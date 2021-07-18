@@ -59,7 +59,7 @@ void PongServer::Update()
 		{
 		case Protocal::ACK:
 		{
-			std::cout << "ACK" << std::endl;
+			std::cout << msg.m_header.m_source_id << std::endl;
 			break;
 		}
 		case Protocal::PLAYER_UPDATE:
@@ -89,6 +89,10 @@ void PongServer::Update()
 			if (msg.m_header.m_source_id < m_uid)
 				m_uid = msg.m_header.m_source_id;
 			break;
+		}
+		case Protocal::RESTART:
+		{
+			MessageToAllClient(msg, msg.m_header.m_source_id);
 		}
 		default:
 			break;

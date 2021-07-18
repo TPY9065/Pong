@@ -8,7 +8,8 @@ enum class Protocal
     BALL_UPDATE,
     PLAYER_LOSE,
     PLAYER_CONNECT,
-    PLAYER_DISCONNECT
+    PLAYER_DISCONNECT,
+    RESTART
 };
 
 class PongClient: public NetClient<Protocal>
@@ -19,17 +20,19 @@ public:
     // default destructor
     ~PongClient();
     // add score when other player fails to hit the ball back 
-    void AddScore();
+    void LosePoint();
     // move towards x and y steps
     void Move(int stepX, int stepY);
     // set the plate xy-pos and width height
     void SetXYWH();
     // set the client's ID
     void SetID(uint32_t id);
+    void SetPlayer(Player p);
     // main function of the client
     void Run();
     // send message to server
     void MessageToServer(NetMessage<Protocal> msg);
+    void SetScore(int score);
     uint32_t GetID() { return m_uid; };
     uint32_t GetScore() { return m_score; };
     int ClampX(int x);

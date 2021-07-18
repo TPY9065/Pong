@@ -1,13 +1,18 @@
 #include "Game.h"
 
-Game::Game() : m_ball(World::WIDTH / 2, World::HEIGHT / 2, World::WIDTH / 50), m_bKeyDown({ {'U', false}, {'D', false}, {'L', false}, {'R', false} })
+Game::Game() : m_ball(World::WIDTH / 2, World::HEIGHT / 2, World::WIDTH / 50), 
+m_bKeyDown({ {'U', false}, {'D', false}, {'L', false}, {'R', false} }),
+m_bPlayerExist({ {Player::P1, false}, {Player::P2, false}, {Player::P3, false}, {Player::P4, false}, })
 {	
 	// init SDL
 	Init();
 	// init player
 	m_running = true;
-	m_start = false;
 	m_bKeyPressed = false;
+	m_state = GameState::IDLE;
+	m_winner = Player::EMPTY;
+	m_bLose = false;
+	m_place = 0;
 }
 
 Game::~Game()
@@ -104,9 +109,11 @@ void Game::GetInput()
 			case SDLK_KP_ENTER:
 				if (GetPlayer() == Player::P1)
 				{
-					m_ball.Init();
-					NetMessage<Protocal> ball_data(GetID(), Protocal::BALL_UPDATE, { static_cast<uint32_t>(m_ball.GetVX()), static_cast<uint32_t>(m_ball.GetVY()) });
-					MessageToServer(ball_data);
+					if (m_ball.Init())
+					{
+						NetMessage<Protocal> ball_data(GetID(), Protocal::BALL_UPDATE, { static_cast<uint32_t>(m_ball.GetVX()), static_cast<uint32_t>(m_ball.GetVY()) });
+						MessageToServer(ball_data);
+					}
 				}
 			}
 			break;
@@ -155,7 +162,7 @@ void Game::GetInput()
 		}
 	}
 
-	if (m_bKeyDown['U'] || m_bKeyDown['D'] || m_bKeyDown['L'] || m_bKeyDown['R'])
+	if (m_bKeyDown['U'] || m_bKeyDown['D'] || m_bKeyDown['L'] || m_bKeyDown['R'] && !m_bLose && m_winner == Player::EMPTY)
 	{
 		if (m_bKeyDown['U'])
 			Move(0, -10);
@@ -251,23 +258,59 @@ void Game::MoveBall()
 		// check which wall the ball hit
 		if (arrivedPos.m_x - m_ball.GetRadius() < 0)
 		{
-			m_ball.SetPos(0 + m_ball.GetRadius(), m_ball.GetY());
-			m_ball.SetVec(-m_ball.GetVX(), m_ball.GetVY());
+			if (m_bPlayerExist[Player::P1])
+			{
+				if (GetPlayer() == Player::P1)
+					LosePoint();
+				m_ball.Reset();
+			}
+			else if (!m_bPlayerExist[Player::P1])
+			{
+				m_ball.SetPos(0 + m_ball.GetRadius(), m_ball.GetY());
+				m_ball.SetVec(-m_ball.GetVX(), m_ball.GetVY());
+			}
 		}
 		else if (arrivedPos.m_x + m_ball.GetRadius() > World::WIDTH)
 		{
-			m_ball.SetPos(World::WIDTH - m_ball.GetRadius(), m_ball.GetY());
-			m_ball.SetVec(-m_ball.GetVX(), m_ball.GetVY());
+			if (m_bPlayerExist[Player::P2])
+			{
+				if (GetPlayer() == Player::P2)
+					LosePoint();
+				m_ball.Reset();
+			}
+			else if (!m_bPlayerExist[Player::P2])
+			{
+				m_ball.SetPos(World::WIDTH - m_ball.GetRadius(), m_ball.GetY());
+				m_ball.SetVec(-m_ball.GetVX(), m_ball.GetVY());
+			}
 		}
 		else if (arrivedPos.m_y - m_ball.GetRadius() < 0)
 		{
-			m_ball.SetPos(m_ball.GetX(), 0 + m_ball.GetRadius());
-			m_ball.SetVec(m_ball.GetVX(), -m_ball.GetVY());
+			if (m_bPlayerExist[Player::P3])
+			{
+				if (GetPlayer() == Player::P3)
+					LosePoint();
+				m_ball.Reset();
+			}
+			else if (!m_bPlayerExist[Player::P3])
+			{
+				m_ball.SetPos(m_ball.GetX(), 0 + m_ball.GetRadius());
+				m_ball.SetVec(m_ball.GetVX(), -m_ball.GetVY());
+			}
 		}
 		else if (arrivedPos.m_y + m_ball.GetRadius() > World::HEIGHT)
 		{
-			m_ball.SetPos(m_ball.GetX(), World::HEIGHT - m_ball.GetRadius());
-			m_ball.SetVec(m_ball.GetVX(), -m_ball.GetVY());
+			if (m_bPlayerExist[Player::P4])
+			{
+				if (GetPlayer() != Player::P4)
+					LosePoint();
+				m_ball.Reset();
+			}
+			else if (!m_bPlayerExist[Player::P4])
+			{
+				m_ball.SetPos(m_ball.GetX(), World::HEIGHT - m_ball.GetRadius());
+				m_ball.SetVec(m_ball.GetVX(), -m_ball.GetVY());
+			}
 		}
 		return;
 	}
@@ -357,45 +400,35 @@ void Game::Update()
 		{
 		case Protocal::ACK:
 		{
-			SetID(msg.m_body[0]);
-			SetXYWH();
-			std::cout << "Your ID: " << GetID() << std::endl;
-			NetMessage<Protocal> self_data(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
-			WriteMessage(self_data);
+			SetSelfID(msg.m_body[0]);
 			break;
 		}
 		case Protocal::PLAYER_UPDATE:
 		{
-			// update opponents position
-			if (m_opponents.find(msg.m_header.m_source_id) == m_opponents.end())
-			{
-				std::cout << "Player ID: " << msg.m_header.m_source_id << " is in the room" << std::endl;
-				m_opponents.emplace(msg.m_header.m_source_id, Opponent(msg.m_header.m_source_id));
-			}
-			m_opponents[msg.m_header.m_source_id].SetXYWH(msg.m_body[0], msg.m_body[1], msg.m_body[2], msg.m_body[3]);
+			PlayerUpdate(msg.m_header.m_source_id, msg.m_body[0], msg.m_body[1], msg.m_body[2], msg.m_body[3]);
 			break;
 		}
 		case Protocal::BALL_UPDATE:
 			m_ball.SetVec(msg.m_body[0], msg.m_body[1]);
 			break;
+		case Protocal::PLAYER_LOSE:
+		{
+			SetPlayerLose(msg.m_header.m_source_id, static_cast<Player>(msg.m_body[0]));
+			break;
+		}
 		case Protocal::PLAYER_CONNECT:
 		{
-			// create an opponent object if no exist
-			if (m_opponents.find(msg.m_body[0]) == m_opponents.end())
-			{
-				std::cout << "Player ID: " << msg.m_body[0] << " is connected" << std::endl;
-				m_opponents.emplace(msg.m_body[0], Opponent(msg.m_body[0]));
-				// send back self data
-				NetMessage<Protocal> self_data(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
-				MessageToServer(self_data);
-			}
+			AddPlayer(msg.m_body[0]);
 			break;
 		}
 		case Protocal::PLAYER_DISCONNECT:
 		{
-			std::cout << "Player ID[" << msg.m_body[0] << "] is disconnected" << std::endl;
-			// remove the opponent
-			m_opponents.erase(msg.m_header.m_source_id);
+			RemovePlayer(msg.m_header.m_source_id);
+			break;
+		}
+		case Protocal::RESTART:
+		{
+			Reset();
 			break;
 		}
 		default:
@@ -406,32 +439,173 @@ void Game::Update()
 
 void Game::Run()
 {
-	Uint32 startFrameTime, endFrameTime;
-	float delta;
-	startFrameTime = SDL_GetTicks();
-	endFrameTime = SDL_GetTicks();
 	while (m_running)
 	{
-		delta = (endFrameTime - startFrameTime) * 0.001;
-		startFrameTime = SDL_GetTicks();
-		// get user input
-		GetInput();
-		// get data from server
-		Update();
-		// move the ball
-		MoveBall();
-		// draw player and opponents
-		Draw();
-		endFrameTime = SDL_GetTicks();
+		switch (m_state)
+		{
+		case GameState::IDLE:
+		case GameState::PLAY:
+		{
+			// get user input
+			GetInput();
+			// get data from server
+			Update();
+			// move the ball
+			MoveBall();
+			// check if game finished
+			GameFinished();
+			// draw player and opponents
+			Draw();
+			break;
+		}
+		case GameState::FINISH:
+		{
+			while (SDL_PollEvent(&m_userInput) != 0)
+			{
+				switch (m_userInput.type)
+				{
+					// quit
+				case SDL_QUIT:
+				{
+					NetMessage<Protocal> msg(GetID(), Protocal::PLAYER_DISCONNECT, { GetID() });
+					MessageToServer(msg);
+					m_running = false;
+					break;
+				}
+
+				case SDL_KEYDOWN:
+				{
+					switch (m_userInput.key.keysym.sym)
+					{
+					case SDLK_KP_ENTER:
+					{
+						Reset();
+						break;
+					}
+					default:
+						break;
+					}
+				default:
+					break;
+				}
+				}
+				break;
+			}
+		default:
+			break;
+		}
+		}
 	}
 }
 
-void Game::AddPlayer()
+void Game::SetSelfID(int id)
 {
+	if (!m_bLose)
+	{
+		SetID(id);
+		SetXYWH();
+		std::cout << "Your ID: " << GetID() << std::endl;
+		m_bPlayerExist[GetPlayer()] = true;
+		NetMessage<Protocal> self_data(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
+		MessageToServer(self_data);
+		m_place = m_opponents.size() + 1;
+	}
+}
 
+void Game::AddPlayer(int id)
+{
+	// create an opponent object if no exist
+	if (m_opponents.find(id) == m_opponents.end() && !m_bLose && m_winner == Player::EMPTY)
+	{
+		std::cout << "Player ID: " << id << " is connected" << std::endl;
+		m_opponents.emplace(id, Opponent(id));
+		m_bPlayerExist[m_opponents[id].GetPlayer()] = true;
+		// send back self data
+		NetMessage<Protocal> self_data(GetID(), Protocal::PLAYER_UPDATE, { GetUX(), GetUY(), GetUWidth(), GetUHeight() });
+		MessageToServer(self_data);
+		m_place = m_opponents.size() + 1;
+	}
+}
+
+void Game::RemovePlayer(int id)
+{
+	std::cout << "Player ID[" << id << "] is disconnected" << std::endl;
+	// remove the opponent
+	m_bPlayerExist[m_opponents[id].GetPlayer()] = false;
+	if (m_opponents.find(id) != m_opponents.end())
+	{
+		m_opponents.erase(id);
+		m_place = m_opponents.size() + 1;
+	}
+}
+
+void Game::PlayerUpdate(int id, int x, int y, int w, int h)
+{
+	// update opponents position
+	if (m_opponents.find(id) == m_opponents.end() && !m_bLose && m_winner == Player::EMPTY)
+	{
+		std::cout << "Player ID: " << id << " is in the room" << std::endl;
+		m_opponents.emplace(id, Opponent(id));
+		m_bPlayerExist[m_opponents[id].GetPlayer()] = true;
+		m_place = m_opponents.size() + 1;
+	}
+	m_opponents[id].SetXYWH(x, y, w, h);
+}
+
+void Game::SetPlayerLose(int id, Player p)
+{
+	std::cout << "Player " << static_cast<uint32_t>(p) + 1 << " lose." << std::endl;
+	m_bPlayerExist[p] = false;
+	m_opponents[id].SetXYWH(0, 0, 0, 0);
+	m_place -= 1;
+
+	if (m_place == 1)
+	{
+		std::cout << "You Win!" << std::endl
+			<< "Your score is " << GetScore() << std::endl
+			<< "You are place " << m_place << std::endl;
+		m_state = GameState::FINISH;
+		m_winner = GetPlayer();
+		m_ball.Reset();
+	}
+}
+
+void Game::Reset()
+{
+	SetID(GetID());
+	SetPlayer(GetPlayer());
+	SetXYWH();
+	SetScore(1);
+	m_ball.Reset();
+	for (auto opponent = m_opponents.begin(); opponent != m_opponents.end(); opponent++)
+	{
+		opponent->second.Reset();
+		m_bPlayerExist[opponent->second.GetPlayer()] = true;
+	}
+
+	NetMessage<Protocal> restart(GetID(), Protocal::RESTART, { GetID() });
+	MessageToServer(restart);
+	m_state = GameState::PLAY;
 }
 
 bool Game::IsInit()
 {
-	return (m_Window && m_Renderer) ? true : false;
+	return (m_Window && m_Renderer);
+}
+
+bool Game::GameFinished()
+{
+	if (GetScore() == 0 && !m_bLose) {
+		std::cout << "You Lose!" << std::endl
+				  << "Your score is " << GetScore() << std::endl
+			      << "You are place " << m_place << std::endl;
+		NetMessage<Protocal> loose(GetID(), Protocal::PLAYER_LOSE, { static_cast<uint32_t>(GetPlayer()) });
+		MessageToServer(loose);
+		m_bPlayerExist[GetPlayer()] = false;
+		SetPlayer(Player::EMPTY);
+		SetXYWH();
+		m_bLose = true;
+		return true;
+	}
+	return false;
 }

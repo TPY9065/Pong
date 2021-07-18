@@ -23,14 +23,16 @@ void Ball::Bounce(Player player)
 		m_vec.SetXY(m_vec.m_x, -m_vec.m_y);
 }
 
-void Ball::Init()
+bool Ball::Init()
 {
 	// randomly generate the velocity of the ball if it has zero velocity
 	if (m_vec == ZERO)
 	{
 		// get random x and y velocity
 		m_vec.SetXY(rand() % 3 + 4, rand() % 3 + 4);
+		return true;
 	}
+	return false;
 }
 
 void Ball::Move()

@@ -1,7 +1,7 @@
 #include "PongClient.h"
 
 // default constructor
-PongClient::PongClient(): m_uid(0), m_score(0), m_x(0), m_y(0), m_width(0), m_height(0), m_player(Player::EMPTY)
+PongClient::PongClient(): m_uid(0), m_score(1), m_x(0), m_y(0), m_width(0), m_height(0), m_player(Player::EMPTY)
 {
 	ConnectToServer();
 }
@@ -13,9 +13,9 @@ PongClient::~PongClient()
 }
 
 // add score when opponent fails to hit the ball back 
-void PongClient::AddScore()
+void PongClient::LosePoint()
 {
-	m_score += 1;
+	m_score -= 1;
 }
 
 void PongClient::Move(int stepX, int stepY)
@@ -52,6 +52,11 @@ void PongClient::SetXYWH()
 		m_width = World::WIDTH / 5;
 		m_height = World::HEIGHT / 40;
 		break;
+	case Player::EMPTY:
+		m_x = 0;
+		m_y = 0;
+		m_width = 0;
+		m_height = 0;
 	default:
 		break;
 	}
@@ -63,6 +68,11 @@ void PongClient::SetID(uint32_t id)
 	m_player = static_cast<Player>(m_uid % 10000);
 }
 
+void PongClient::SetPlayer(Player p)
+{
+	m_player = p;
+}
+
 void PongClient::Run()
 {
 	while (true)
@@ -72,6 +82,11 @@ void PongClient::Run()
 void PongClient::MessageToServer(NetMessage<Protocal> msg)
 {
 	WriteMessage(msg);
+}
+
+void PongClient::SetScore(int score)
+{
+	m_score = std::max(1, score);
 }
 
 int PongClient::ClampX(int x)

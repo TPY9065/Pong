@@ -10,7 +10,7 @@ public:
     // default destructor
     ~Ball();
     void Bounce(Player player);
-    void Init();
+    bool Init();
     void Move();
     void Reset();
     void SetVec(int x, int y);

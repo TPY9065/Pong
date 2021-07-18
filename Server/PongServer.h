@@ -18,7 +18,8 @@ enum class Protocal
     BALL_UPDATE,
     PLAYER_LOSE,
     PLAYER_CONNECT,
-    PLAYER_DISCONNECT
+    PLAYER_DISCONNECT,
+    RESTART
 };
 
 class PongServer: public NetServer<Protocal>
