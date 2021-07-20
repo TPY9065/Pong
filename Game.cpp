@@ -261,7 +261,9 @@ void Game::MoveBall()
 			if (m_bPlayerExist[Player::P1])
 			{
 				if (GetPlayer() == Player::P1)
+				{
 					LosePoint();
+				}
 				m_ball.Reset();
 			}
 			else if (!m_bPlayerExist[Player::P1])
